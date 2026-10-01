@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Downtime Tracker</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --text-muted: #aaaaaa;
+            --primary: #4CAF50;
+            --danger: #f44336;
+            --accent: #2196F3;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* Views */
+        #dashboard, #timer-view, #form-view, #settings-view {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .active-view {
+            display: flex !important;
+        }
+
+        /* Typography & Inputs */
+        h1, h2 { text-align: center; margin: 10px 0; }
+
+        .stopwatch {
+            font-size: 4rem;
+            font-family: monospace;
+            text-align: center;
+            font-weight: bold;
+            margin: 40px 0;
+            color: var(--primary);
+        }
+
+        select, textarea, input[type="text"] {
+            width: 100%;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-top: 5px;
+            -webkit-appearance: none; /* Fixes Apple dropdown styling */
+            appearance: none;
+        }
+
+        textarea { resize: vertical; min-height: 100px; }
+        
+        label { font-weight: bold; color: var(--accent); }
+
+        /* Buttons */
+        button {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        .btn-start { background-color: var(--primary); padding: 30px; font-size: 1.5rem; }
+        .btn-stop { background-color: var(--danger); padding: 30px; font-size: 1.5rem;}
+        .btn-save { background-color: var(--accent); }
+        .btn-export { background-color: var(--surface-color); border: 1px solid #444; }
+        .btn-margin-top { margin-top: 20px; }
+        .btn-icon { width: auto; padding: 5px 15px; background: transparent; box-shadow: none; font-size: 1.2rem; border-radius: 6px; border: 1px solid #444; }
+
+        /* Logs List */
+        .log-section { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        .log-card { background-color: var(--surface-color); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid var(--accent); }
+        .log-card h4 { margin: 0 0 5px 0; font-size: 1.1rem; }
+        .log-card p { margin: 5px 0 0 0; font-size: 0.95rem; color: var(--text-muted); }
+        .log-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboard" class="active-view">
+        <h1>Shift Tracker</h1>
+        <button id="btn-new-incident" class="btn-start">⏱️ NEW INCIDENT</button>
+
+        <div class="log-section">
+            <h2>Today's Logs</h2>
+            <div id="log-list"></div>
+            <button id="btn-export" class="btn-export btn-margin-top">📤 Send</button>
+            <button id="btn-clear" class="btn-export btn-margin-top" style="color: var(--danger); border-color: var(--danger);">🗑️ Clear All Logs</button>
+            <button id="btn-settings" class="btn-export btn-margin-top">⚙ Configuration️</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="settings-view">
+        <h2>Configuration</h2>
+        
+        <div>
+            <label>Line Names (Enter one per line)</label>
+            <textarea id="config-lines" rows="6"></textarea>
+        </div>
+
+        <div>
+            <label>Field 1 Prompt</label>
+            <input type="text" id="config-prompt-1">
+        </div>
+
+        <div>
+            <label>Field 2 Prompt</label>
+            <input type="text" id="config-prompt-2">
+        </div>
+
+        <button id="btn-save-settings" class="btn-save btn-margin-top">💾 Save Settings</button>
+        <button id="btn-cancel-settings" class="btn-export btn-margin-top">❌ Cancel</button>
+    </div>
+
+    <!-- TIMER VIEW -->
+    <div id="timer-view">
+        <h2>Line Down</h2>
+        <div id="stopwatch-display" class="stopwatch">00:00:00</div>
+        <button id="btn-complete" class="btn-stop">🛑 COMPLETE</button>
+    </div>
+
+    <!-- FORM VIEW -->
+    <div id="form-view">
+        <h2 id="form-title">Log Details</h2>
+        
+        <label>Line Name</label>
+        <select id="input-line"></select>
+
+        <label id="label-problem">Problem</label>
+        <textarea id="input-problem"></textarea>
+
+        <label id="label-resolution">Resolution</label>
+        <textarea id="input-resolution"></textarea>
+
+        <button id="btn-save" class="btn-save btn-margin-top">💾 Save Log</button>
+        <button id="btn-cancel" class="btn-export btn-margin-top">❌ Cancel</button>
+    </div>
+
+</div>
+
+<script>
+    // --- SAFE STORAGE WRAPPER (Fixes Apple Local File Crash) ---
+    const safeStorage = {
+        getItem: function(key) {
+            try { return window.localStorage.getItem(key); } 
+            catch(e) { return null; }
+        },
+        setItem: function(key, value) {
+            try { window.localStorage.setItem(key, value); } 
+            catch(e) { console.warn("Storage blocked by iOS security."); }
+        }
+    };
+
+    // --- STATE VARIABLES ---
+    let incidents = JSON.parse(safeStorage.getItem('shift_incidents')) || [];
+    let config = JSON.parse(safeStorage.getItem('shift_config')) || {
+        lines: ["Line 1", "Line 2", "Line 3", "Line 4", "Packaging", "Other"],
+        prompt1: "Problem Description",
+        prompt2: "Resolution / Troubleshooting"
+    };
+    let currentIncident = null;
+    let editingIncidentId = null; 
+    let timerInterval = null;
+
+    // Ensure all older logs have an ID assigned
+    incidents.forEach(inc => { if(!inc.id) inc.id = inc.startTime; });
+
+    // DOM Elements
+    const views = {
+        dashboard: document.getElementById('dashboard'),
+        timer: document.getElementById('timer-view'),
+        form: document.getElementById('form-view'),
+        settings: document.getElementById('settings-view')
+    };
+    const display = document.getElementById('stopwatch-display');
+    const logList = document.getElementById('log-list');
+
+    // Initialize
+    applyConfigToUI();
+    renderLogs();
+
+    // --- NAVIGATION ---
+    function showView(viewName) {
+        Object.values(views).forEach(v => v.classList.remove('active-view'));
+        views[viewName].classList.add('active-view');
+    }
+
+    // --- CONFIGURATION LOGIC ---
+    function applyConfigToUI() {
+        const lineSelect = document.getElementById('input-line');
+        lineSelect.innerHTML = '';
+        config.lines.forEach(line => {
+            const opt = document.createElement('option');
+            opt.value = line;
+            opt.innerText = line;
+            lineSelect.appendChild(opt);
+        });
+
+        document.getElementById('label-problem').innerText = config.prompt1;
+        document.getElementById('input-problem').placeholder = `Enter ${config.prompt1.toLowerCase()}...`;
+        
+        document.getElementById('label-resolution').innerText = config.prompt2;
+        document.getElementById('input-resolution').placeholder = `Enter ${config.prompt2.toLowerCase()}...`;
+    }
+
+    document.getElementById('btn-settings').addEventListener('click', () => {
+        document.getElementById('config-lines').value = config.lines.join('\n');
+        document.getElementById('config-prompt-1').value = config.prompt1;
+        document.getElementById('config-prompt-2').value = config.prompt2;
+        showView('settings');
+    });
+
+    document.getElementById('btn-save-settings').addEventListener('click', () => {
+        const linesText = document.getElementById('config-lines').value;
+        const newLines = linesText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        const newPrompt1 = document.getElementById('config-prompt-1').value.trim() || "Problem Description";
+        const newPrompt2 = document.getElementById('config-prompt-2').value.trim() || "Resolution / Troubleshooting";
+
+        if(newLines.length === 0) {
+            alert("You must have at least one line name.");
+            return;
+        }
+
+        config = { lines: newLines, prompt1: newPrompt1, prompt2: newPrompt2 };
+        safeStorage.setItem('shift_config', JSON.stringify(config));
+        
+        applyConfigToUI();
+        showView('dashboard');
+    });
+
+    document.getElementById('btn-cancel-settings').addEventListener('click', () => {
+        showView('dashboard');
+    });
+
+    // --- TIMER LOGIC ---
+    document.getElementById('btn-new-incident').addEventListener('click', () => {
+        currentIncident = { id: Date.now(), startTime: Date.now() };
+        editingIncidentId = null;
+        document.getElementById('form-title').innerText = "Log Details";
+        display.innerText = "00:00:00";
+        showView('timer');
+        
+        timerInterval = setInterval(() => {
+            const elapsed = Date.now() - currentIncident.startTime;
+            display.innerText = formatTime(elapsed);
+        }, 1000);
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', () => {
+        clearInterval(timerInterval);
+        currentIncident.endTime = Date.now();
+        showView('form');
+    });
+
+    // --- FORM LOGIC ---
+    document.getElementById('btn-save').addEventListener('click', () => {
+        const line = document.getElementById('input-line').value;
+        const problem = document.getElementById('input-problem').value;
+        const resolution = document.getElementById('input-resolution').value;
+
+        if(!problem) {
+            alert(`Please enter details for: ${config.prompt1}`);
+            return;
+        }
+
+        if (editingIncidentId) {
+            const index = incidents.findIndex(i => i.id === editingIncidentId);
+            if (index !== -1) {
+                incidents[index].line = line;
+                incidents[index].problem = problem;
+                incidents[index].resolution = resolution;
+            }
+        } else {
+            currentIncident.line = line;
+            currentIncident.problem = problem;
+            currentIncident.resolution = resolution;
+            incidents.push(currentIncident);
+        }
+        
+        safeStorage.setItem('shift_incidents', JSON.stringify(incidents));
+        
+        resetForm();
+        renderLogs();
+        showView('dashboard');
+    });
+
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+        if (currentIncident && !editingIncidentId) {
+            if(!confirm("Cancel logging this downtime? The timer data will be lost.")) return;
+        }
+        resetForm();
+        showView('dashboard');
+    });
+
+    function resetForm() {
+        document.getElementById('input-problem').value = '';
+        document.getElementById('input-resolution').value = '';
+        currentIncident = null;
+        editingIncidentId = null;
+    }
+
+    // --- EDIT / DELETE LOGIC ---
+    window.editIncident = function(id) {
+        const inc = incidents.find(i => i.id === id);
+        if(!inc) return;
+
+        editingIncidentId = id;
+        document.getElementById('form-title').innerText = "Edit Log";
+        document.getElementById('input-line').value = inc.line;
+        document.getElementById('input-problem').value = inc.problem;
+        document.getElementById('input-resolution').value = inc.resolution;
+        
+        showView('form');
+    };
+
+    window.deleteIncident = function(id) {
+        if(confirm("Are you sure you want to delete this specific log?")) {
+            incidents = incidents.filter(inc => inc.id !== id);
+            safeStorage.setItem('shift_incidents', JSON.stringify(incidents));
+            renderLogs();
+        }
+    };
+
+    // --- DISPLAY LOGIC ---
+    function renderLogs() {
+        logList.innerHTML = '';
+        if(incidents.length === 0) {
+            logList.innerHTML = '<p style="text-align:center; color:gray;">No incidents logged today.</p>';
+            return;
+        }
+
+        [...incidents].reverse().forEach(inc => {
+            const duration = Math.floor((inc.endTime - inc.startTime) / 60000);
+            const div = document.createElement('div');
+            div.className = 'log-card';
+            div.innerHTML = `
+                <h4>${inc.line} <span style="float:right">${duration} min</span></h4>
+                <p><strong>${config.prompt1}:</strong> ${inc.problem}</p>
+                <p><strong>${config.prompt2}:</strong> ${inc.resolution}</p>
+                <div class="log-actions">
+                    <button class="btn-icon" onclick="editIncident(${inc.id})" title="Edit">✏️</button>
+                    <button class="btn-icon" onclick="deleteIncident(${inc.id})" title="Delete">🗑️</button>
+                </div>
+            `;
+            logList.appendChild(div);
+        });
+    }
+
+    // --- EXPORT / CLEAR ALL LOGIC ---
+    document.getElementById('btn-export').addEventListener('click', async () => {
+        if(incidents.length === 0) { alert("No logs to export!"); return; }
+
+        const grouped = incidents.reduce((acc, inc) => {
+            if(!acc[inc.line]) acc[inc.line] = [];
+            acc[inc.line].push(inc);
+            return acc;
+        }, {});
+
+        const dateStr = new Date().toLocaleDateString();
+        let exportText = `Shift Log: ${dateStr}\n\n`;
+
+        for (const [line, logs] of Object.entries(grouped)) {
+            exportText += `** ${line} **\n`;
+            logs.forEach(log => {
+                const start = new Date(log.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const end = new Date(log.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const duration = Math.floor((log.endTime - log.startTime) / 60000);
+                
+                exportText += `[${start} - ${end}] (${duration}m)\n`;
+                exportText += `• ${config.prompt1}: ${log.problem}\n`;
+                exportText += `• ${config.prompt2}: ${log.resolution}\n\n`;
+            });
+        }
+
+        if (navigator.share) {
+            try { await navigator.share({ title: `Shift Log ${dateStr}`, text: exportText, }); } 
+            catch (err) { console.log('Share cancelled or failed', err); }
+        } else {
+            try {
+                await navigator.clipboard.writeText(exportText);
+                alert("Logs copied to clipboard! You can paste them into Google Keep.");
+            } catch (err) {
+                alert("Please select and copy the text manually.");
+            }
+        }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        if(confirm("Are you sure you want to delete ALL logs for today? This cannot be undone.")) {
+            incidents = [];
+            safeStorage.setItem('shift_incidents', JSON.stringify([]));
+            renderLogs();
+        }
+    });
+
+    // --- UTILITIES ---
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+</script>
+</body>
+</html>

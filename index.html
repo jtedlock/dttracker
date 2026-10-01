@@ -188,7 +188,7 @@
     let incidents = JSON.parse(safeStorage.getItem('shift_incidents')) || [];
     let config = JSON.parse(safeStorage.getItem('shift_config')) || {
         lines: ["Pkg 1 Headers & Bows", "Pkg 2", "Pkg 3 C-Pillar", "Pkg 4 B-Pillar", "Pkg 5 D-Pillar", "Pkg 6 A-Pillar", "Pkg 7 Perceptron", "Pkg 7 Big Dash", "Pkg 7 Framer", "Pkg 7 LH Bodyside", "Pkg 7 RH Bodyside", "Pkg 8 Floorpan", "Pkg 8 LH Rails", "Pkg 8 RH Rails", "Pkg 9 Ladder", "Pkg 9 Mainline", "Pkg 11 Rail Lower", "Pkg 13 Clinch", "Pkg 14 Rollform", "Pkg 15 Small Dash", "Other"],
-        prompt1: "Problem",
+        prompt1: "Issue",
         prompt2: "Fix"
     };
     let currentIncident = null;
